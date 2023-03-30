@@ -30,7 +30,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const userRoom = this.users[userIndex].roomName;
 
         client.leave(userRoom);
-        this.users.splice(userIndex);
+        this.users.splice(userIndex, 1);
     }
 
     @SubscribeMessage('join_room')
