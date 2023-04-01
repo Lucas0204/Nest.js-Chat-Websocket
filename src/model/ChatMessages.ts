@@ -35,6 +35,8 @@ export class ChatMessages implements IChatMessages {
             WHERE room_id = ${room_id}
         `) as Message[];
 
+        await db.close();
+
         return messages;
     }
 }
