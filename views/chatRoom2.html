@@ -20,19 +20,18 @@
         const socket = io('http://localhost:3000');
         const chatField = document.getElementById('chat_messages');
 
-        socket.on('message', message => {
-            console.log(message);
-            chatField.value += `<p>${message}</p>`;
+        socket.on('message', data => {
+            chatField.innerHTML += `<p>${data.username}: ${data.message}</p>`;
         });
 
-        socket.emit('join_room', { roomId: 2 }, response => {
-            console.log('joined!', response);
-            socket.emit('room_message', { message: 'Salvee! Aqui é o ' + socket.id });
+        socket.emit('join_room', { roomId: 2, username: 'John Doe' }, response => {
+            chatField.innerHTML = response.messages.map(msg => `<p>${msg.username}: ${msg.message}</p>`).join('');
         });
 
         function sendMessage() {
             const message = document.getElementById('message_text');
-            console.log(message);
+            chatField.innerHTML += `<p>John Doe: ${message.value}</p>`;
+
             socket.emit('room_message', { message: message.value });
             message.value = '';
         }

@@ -8,13 +8,25 @@ import {
     WebSocketServer
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
+import { ChatService } from './chat.service';
+import { Inject } from '@nestjs/common';
+
+export interface UserData {
+    id: string;
+    name?: string;
+    roomName?: string;
+    roomId?: number;
+}
 
 @WebSocketGateway({ cors: true })
-export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
-    private users: { id: string; roomName?: string; }[];
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+    private users: UserData[];
 
     @WebSocketServer()
     private wss: Server;
+
+    @Inject(ChatService)
+    private readonly chatService: ChatService;
 
     constructor() {
         this.users = [];
@@ -35,16 +47,21 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     @SubscribeMessage('join_room')
     async joinRoom(
-        @MessageBody() data: { roomId: number; },
+        @MessageBody() data: { username: string; roomId: number; },
         @ConnectedSocket() socket: Socket
     ) {
         const roomName = `room-${data.roomId}`;
         socket.join(roomName);
 
         const user = this.users.find(user => user.id === socket.id);
+
+        user.name = data.username;
+        user.roomId = data.roomId;
         user.roomName = roomName;
 
-        return { status: 'Ok!', roomId: data.roomId };
+        const messages = await this.chatService.getRoomMessages(data.roomId);
+
+        return { status: 'Ok!', roomId: data.roomId, messages };
     }
 
     @SubscribeMessage('room_message')
@@ -53,6 +70,12 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() socket: Socket
     ) {
         const user = this.users.find(user => user.id === socket.id);
-        socket.to(user.roomName).emit('message', data.message);
+        socket.to(user.roomName).emit('message', { message: data.message, username: user.name });
+
+        await this.chatService.saveMessage({
+            message: data.message,
+            username: user.name,
+            room_id: user.roomId
+        });
     }
 }

@@ -1,8 +1,11 @@
+import { Injectable } from '@nestjs/common';
 import Database from '../db';
+import { IChatMessages, SaveMessageData } from './IChatMessages';
+import { Message } from 'src/entities/Message';
 
-export class ChatMessages {
-
-    async saveMessage(data: { message: string; username: string; room_id: number; }) {
+@Injectable()
+export class ChatMessages implements IChatMessages {
+    async saveMessage(data: SaveMessageData) {
         const db = await Database.init();
         const { message, username, room_id } = data;
 
@@ -21,5 +24,17 @@ export class ChatMessages {
         `);
 
         await db.close();
+    }
+
+    async getRoomMessages(room_id: number): Promise<Message[]> {
+        const db = await Database.init();
+
+        const messages = await db.all(`
+            SELECT *
+            FROM messages
+            WHERE room_id = ${room_id}
+        `) as Message[];
+
+        return messages;
     }
 }
